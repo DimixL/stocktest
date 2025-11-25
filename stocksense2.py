@@ -1620,6 +1620,7 @@ def main() -> None:
         quote_source_placeholder = st.empty()
         history_source_placeholder = st.empty()
         news_source_placeholder = st.empty()
+        st.caption(f"DEBUG: has_openai={has_openai()} model={OPENAI_MODEL}")
 
     st.title("StockSense • Аналитика по акциям")
     st.caption("Карточка тикера и управляемый список наблюдения")
