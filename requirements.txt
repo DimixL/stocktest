@@ -1,7 +1,14 @@
-streamlit
-numpy
-pandas
-plotly
-requests
-requests-cache
-pandas-datareader
+streamlit>=1.40.0
+pandas>=2.2.0
+numpy>=1.26.0
+
+plotly>=5.24.0
+kaleido>=0.2.1       # для экспорта графиков в PNG
+
+requests>=2.31.0
+requests-cache>=1.2.0
+
+pandas-datareader>=0.10.0
+lxml>=5.0.0          # зависимость pandas-datareader
+
+setuptools>=75.0.0   # чтобы вернуть модуль distutils в среду Python 3.12/3.13
