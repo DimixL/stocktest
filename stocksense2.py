@@ -34,7 +34,6 @@ import plotly.graph_objects as go
 import requests
 import requests_cache
 import streamlit as st
-from pandas_datareader import data as web
 from textwrap import dedent
 
 # -----------------------------------------------------------------------------
@@ -926,6 +925,7 @@ def generate_demo_series(symbol: str, count: int = 300) -> pd.DataFrame:
 
 @st.cache_data(ttl=600)
 def fetch_history(symbol: str, count: int = 300) -> Tuple[pd.DataFrame, str]:
+    # 1) Пытаемся через Finnhub, как и раньше
     if FINNHUB_API_KEY:
         params = {
             "symbol": symbol,
@@ -956,35 +956,42 @@ def fetch_history(symbol: str, count: int = 300) -> Tuple[pd.DataFrame, str]:
         except Exception:
             pass
 
+    # 2) Фолбэк на Stooq через CSV (без pandas_datareader)
     try:
-        end_dt = utc_now()
-        start_dt = end_dt - timedelta(days=count * 2)
-        df = web.DataReader(
-            symbol,
-            "stooq",
-            start_dt.replace(tzinfo=None),
-            end_dt.replace(tzinfo=None),
-        )
+        # Stooq ожидает тикер вида aapl.us
+        sym = symbol.lower()
+        if "." not in sym:
+            sym = sym + ".us"
+
+        url = f"https://stooq.pl/q/d/l/?s={sym}&i=d"
+        resp = requests.get(url, timeout=5)
+        resp.raise_for_status()
+
+        df = pd.read_csv(io.StringIO(resp.text))
         if not df.empty:
-            df = (
-                df.reset_index()
-                .rename(
-                    columns={
-                        "Date": "time",
-                        "Open": "open",
-                        "High": "high",
-                        "Low": "low",
-                        "Close": "close",
-                        "Volume": "volume",
-                    }
-                )
-                .sort_values("time")
-            )
+            df["Date"] = pd.to_datetime(df["Date"])
+            df = df.rename(
+                columns={
+                    "Date": "time",
+                    "Open": "open",
+                    "High": "high",
+                    "Low": "low",
+                    "Close": "close",
+                    "Volume": "volume",
+                }
+            ).sort_values("time")
+
+            # Обрежем до нужного количества свечей
+            if len(df) > count:
+                df = df.tail(count)
+
             return df[["time", "open", "high", "low", "close", "volume"]], "Stooq"
     except Exception:
         pass
 
+    # 3) Если всё отвалилось — демо-серия
     return generate_demo_series(symbol, count=count), "Demo"
+
 
 
 def fetch_quote(symbol: str) -> Tuple[Dict[str, Optional[float]], str]:
