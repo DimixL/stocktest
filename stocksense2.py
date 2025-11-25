@@ -621,16 +621,15 @@ def _openai_request(messages: List[Dict[str, str]], max_tokens: int = 300) -> Op
     headers = {
         "Authorization": f"Bearer {OPENAI_API_KEY}",
         "Content-Type": "application/json",
-        # не обязательно, но можно указать:
         "HTTP-Referer": os.getenv(
             "OPENROUTER_SITE_URL",
-            "https://github.com/your-github/StockSense",  # можешь поменять на свой репо/сайт
+            "https://dimixl-stocktest.streamlit.app",  # <-- поменяй на URL своего аппа
         ),
         "X-Title": os.getenv("OPENROUTER_APP_NAME", "StockSense"),
     }
 
     payload = {
-        "model": OPENAI_MODEL,   # здесь уже лежит, например, "qwen/qwen3-235b-a22b:free"
+        "model": OPENAI_MODEL,
         "messages": messages,
         "temperature": 0.2,
         "max_tokens": max_tokens,
@@ -639,16 +638,22 @@ def _openai_request(messages: List[Dict[str, str]], max_tokens: int = 300) -> Op
 
     try:
         resp = requests.post(url, headers=headers, json=payload, timeout=30)
-        if resp.ok:
-            data = resp.json()
-            return (
-                data.get("choices", [{}])[0]
-                .get("message", {})
-                .get("content")
-            )
-    except Exception:
+        # временный вывод для дебага
+        if not resp.ok:
+            # не логируем ключи, только статус и текст
+            st.error(f"LLM error: {resp.status_code} {resp.text[:500]}")
+            return None
+
+        data = resp.json()
+        return (
+            data.get("choices", [{}])[0]
+            .get("message", {})
+            .get("content")
+        )
+    except Exception as e:
+        st.error(f"LLM exception: {e}")
         return None
-    return None
+
 
 
 
